@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -86,7 +85,7 @@ const PredictionSubmission: React.FC = () => {
                 <div>
                   <p className="text-blue-700 font-semibold">What happens next?</p>
                   <p className="text-blue-600">Our experts will discuss your prediction for the next {discussionPeriod === '1week' ? 'week' : discussionPeriod === '2weeks' ? 'two weeks' : 'month'}.</p>
-                  <p className="text-blue-600 mt-2">After this period, you'll receive a summary of the evidence and discussion both supporting and challenging your prediction.</p>
+                  <p className="text-blue-600 mt-2">After this period, you&apos;ll receive a summary of the evidence and discussion both supporting and challenging your prediction.</p>
                 </div>
               </div>
             </CardContent>

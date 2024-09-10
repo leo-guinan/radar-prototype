@@ -38,7 +38,7 @@ const TrendsWatch = () => {
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Describe Your Interests</CardTitle>
             <CardDescription>
-              Tell us about the trends you're interested in. Be as specific or broad as you like.
+              Tell us about the trends you&apos;re interested in. Be as specific or broad as you like.
             </CardDescription>
           </CardHeader>
           <CardContent>
