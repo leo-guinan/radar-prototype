@@ -63,6 +63,9 @@ Here's the trend info:
 """
 
 
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 
 
 @app.post("/generate_trend_report")
