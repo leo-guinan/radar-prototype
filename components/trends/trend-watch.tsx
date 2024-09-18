@@ -7,11 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 
-// Mock function to check if user is logged in
-const isUserLoggedIn = () => {
-  // In a real application, this would check the user's authentication status
-  return false;
-};
 
 const TrendsWatch = () => {
   const [interests, setInterests] = useState('');
