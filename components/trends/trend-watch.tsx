@@ -22,13 +22,13 @@ const TrendsWatch = () => {
   };
 
   const handleSubmit = () => {
-    if (isUserLoggedIn()) {
+  //   if (isUserLoggedIn()) {
       // If logged in, navigate to the sample report page
-      router.push('/sample-report');
-    } else {
+      router.push('/trends/report');
+    // } else {
       // If not logged in, navigate to the registration page
-      router.push('/register');
-    }
+      // router.push('/register');
+    // }
   };
 
   return (
