@@ -20,7 +20,7 @@ export interface CollectionTrends {
 export async function generateTrendReport(query: string): Promise<CollectionTrends[]> {
     console.log('generateTrendReport called with query:', query);
 
-    const response = await fetch('http://localhost:8001/generate_trend_report', {
+    const response = await fetch(`${process.env.API_URL}/generate_trend_report`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
