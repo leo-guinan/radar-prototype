@@ -40,7 +40,7 @@ class CollectionTrends(BaseModel):
 #         }
 #         )
 
-client = chromadb.HttpClient(
+chroma_client = chromadb.HttpClient(
   ssl=True,
   host='api.trychroma.com',
   tenant='44bcbb14-87f0-4601-9e2f-3bf64104d7c4',
