@@ -1,11 +1,10 @@
 "use client"
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import useSWR from 'swr';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { CollectionTrends, TrendGroup } from '@/app/actions/trends';
+import { CollectionTrends } from '@/app/actions/trends';
 
 const TrendReport: React.FC = () => {
   const [query, setQuery] = useState('');
