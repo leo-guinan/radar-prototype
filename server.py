@@ -30,15 +30,25 @@ class CollectionTrends(BaseModel):
     collectionName: str
     trends: list[TrendGroup]
 
-chroma_client = chromadb.HttpClient(
-        ssl=True,
-        host='api.trychroma.com',
-        tenant='44bcbb14-87f0-4601-9e2f-3bf64104d7c4',
-        database='ideanexusventures',
-        headers={
-            'x-chroma-token': os.getenv('CHROMA_TOKEN')
-        }
-        )
+# chroma_client = chromadb.HttpClient(
+#         ssl=True,
+#         host='api.trychroma.com',
+#         tenant='44bcbb14-87f0-4601-9e2f-3bf64104d7c4',
+#         database='ideanexusventures',
+#         headers={
+#             'x-chroma-token': os.getenv('CHROMA_TOKEN')
+#         }
+#         )
+
+client = chromadb.HttpClient(
+  ssl=True,
+  host='api.trychroma.com',
+  tenant='44bcbb14-87f0-4601-9e2f-3bf64104d7c4',
+  database='radar',
+  headers={
+      'x-chroma-token': os.getenv('CHROMA_RADAR_TOKEN')
+  }
+)
 
 SUMMARIZE_TREND_TITLE_PROMPT = """
 You are an expert at summarizing trends from a collection of documents.
