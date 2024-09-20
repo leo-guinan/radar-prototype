@@ -1,5 +1,5 @@
 import chromadb
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -8,10 +8,21 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from sklearn.cluster import KMeans
 import os
 from dotenv import load_dotenv
+import asyncio
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 app = FastAPI()
+
+# Add this CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class QueryRequest(BaseModel):
     query: str
@@ -77,9 +88,8 @@ Here's the trend info:
 async def root():
     return {"message": "Hello World"}
 
-
-@app.post("/generate_trend_report")
-async def generate_trend_report(request: QueryRequest) -> list[CollectionTrends]:
+        
+async def process_collection(collection_name: str, query: str) -> CollectionTrends:
     model = ChatOpenAI(model_name="gpt-4o-mini", verbose=True)
     prompt = ChatPromptTemplate.from_template(SUMMARIZE_TREND_TITLE_PROMPT)
 
@@ -92,52 +102,62 @@ async def generate_trend_report(request: QueryRequest) -> list[CollectionTrends]
     chain = prompt | model | StrOutputParser()
     summary_chain = summary_prompt | model | StrOutputParser()
     collections = ["RADAR_LINKS", "RADAR_COMMENTS", "RADAR_POSTS", "RADAR_SUMMARIES"]
-        
-    async def process_collection(collection_name: str) -> CollectionTrends:
-        collection = chroma_client.get_or_create_collection(name=collection_name)
-        results = collection.query(
-            query_texts=[request.query],
-            n_results=25,
-            include=["documents", "embeddings", "metadatas"]
-        )
-        
-        if not results['documents'] or not results['embeddings']:
-            return CollectionTrends(collectionName=collection_name, trends=[])
-        
-        docs = results['documents'][0]
-        embeddings = results['embeddings'][0]
-        metadatas = results['metadatas'][0]
-        print(f"Found {len(docs)} docs for {collection_name}")
-        if len(embeddings) == 0:
-            return CollectionTrends(collectionName=collection_name, trends=[])
-        
-        kmeans = KMeans(n_clusters=min(5, len(embeddings)))
-        clusters = kmeans.fit_predict(embeddings)
-        groups = [[] for _ in range(5)]
-        for i, (doc, cluster) in enumerate(zip(docs, clusters)):
-            groups[cluster].append(TrendItem(
-                title=metadatas[i]['title'],
-                url=metadatas[i]['source'],
-                content=doc
-            ))
-        trends = []
-        for group in groups:
-            if not group:  # Skip empty groups
-                continue
-            print(f"Processing group: {group}")
-            trend_info = "\n\n".join([f"{item.title}: {item.content}" for item in group])
-            title = await chain.ainvoke({"trend_info": trend_info})
-            summary = await summary_chain.ainvoke({"trend_info": trend_info})
-            trends.append(TrendGroup(
-                title=title.strip(),
-                items=group,
-                summary=summary.strip()
-            ))
-        
-        return CollectionTrends(collectionName=collection_name, trends=trends)
+    collection = chroma_client.get_or_create_collection(name=collection_name)
+    results = collection.query(
+        query_texts=[query],
+        n_results=25,
+        include=["documents", "embeddings", "metadatas"]
+    )
     
-    results = [await process_collection(name) for name in collections]
-    return [result for result in results if result.trends]  # Changed this line
+    if not results['documents'] or not results['embeddings']:
+        return CollectionTrends(collectionName=collection_name, trends=[])
+    
+    docs = results['documents'][0]
+    embeddings = results['embeddings'][0]
+    metadatas = results['metadatas'][0]
+    print(f"Found {len(docs)} docs for {collection_name}")
+    if len(embeddings) == 0:
+        return CollectionTrends(collectionName=collection_name, trends=[])
+    
+    kmeans = KMeans(n_clusters=min(5, len(embeddings)))
+    clusters = kmeans.fit_predict(embeddings)
+    groups = [[] for _ in range(5)]
+    for i, (doc, cluster) in enumerate(zip(docs, clusters)):
+        title = metadatas[i].get('title', f"{collection_name.split('_')[1]} {i+1}")
+        groups[cluster].append(TrendItem(
+            title=title,
+            url=metadatas[i]['source'],
+            content=doc
+        ))
+    trends = []
+    for group in groups:
+        if not group:  # Skip empty groups
+            continue
+        print(f"Processing group: {group}")
+        trend_info = "\n\n".join([f"{item.title}: {item.content}" for item in group])
+        title = await chain.ainvoke({"trend_info": trend_info})
+        summary = await summary_chain.ainvoke({"trend_info": trend_info})
+        trends.append(TrendGroup(
+            title=title.strip(),
+            items=group,
+            summary=summary.strip()
+        ))
+    
+    return CollectionTrends(collectionName=collection_name, trends=trends)
+
+async def worker(websocket: WebSocket, query: str):
+    collections = ["RADAR_LINKS", "RADAR_COMMENTS", "RADAR_POSTS", "RADAR_SUMMARIES"]
+    for collection_name in collections:
+        result = await process_collection(collection_name, query)
+        if result.trends:
+            await websocket.send_json(result.dict())
+    await websocket.send_json({"status": "completed"})
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    query = await websocket.receive_text()
+    await worker(websocket, query)
 
 if __name__ == "__main__":
     import uvicorn

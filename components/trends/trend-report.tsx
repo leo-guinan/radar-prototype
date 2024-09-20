@@ -1,27 +1,74 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useSWR from 'swr';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { CollectionTrends, generateTrendReport } from '@/app/actions/trends';
-
+import { CollectionTrends, TrendGroup } from '@/app/actions/trends';
 
 const TrendReport: React.FC = () => {
   const [query, setQuery] = useState('');
   const [collectionTrends, setCollectionTrends] = useState<CollectionTrends[]>([]);
   const [expandedTrend, setExpandedTrend] = useState<{ collection: number, trend: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const connectWebSocket = useCallback(() => {
+    console.log("Attempting to connect WebSocket...");
+    socketRef.current = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
+
+    socketRef.current.onopen = () => {
+      console.log("WebSocket connected");
+      setIsConnected(true);
+    };
+
+    socketRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.status === "completed") {
+        setLoading(false);
+      } else {
+        setCollectionTrends((prev) => [...prev, data]);
+      }
+    };
+
+    socketRef.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setLoading(false);
+      setIsConnected(false);
+    };
+
+    socketRef.current.onclose = () => {
+      console.log("WebSocket disconnected");
+      setIsConnected(false);
+      setTimeout(connectWebSocket, 5000); // Attempt to reconnect after 5 seconds
+    };
+  }, []);
+
+  useEffect(() => {
+    connectWebSocket();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, [connectWebSocket]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isConnected) {
+      console.error("WebSocket is not connected");
+      return;
+    }
     setLoading(true);
-    try {
-      const report = await generateTrendReport(query);
-      setCollectionTrends(report);
-    } catch (error) {
-      console.error("Failed to fetch trends:", error);
-    } finally {
+    setCollectionTrends([]);
+
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(query);
+    } else {
+      console.error("WebSocket is not open");
       setLoading(false);
     }
   };
